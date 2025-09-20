@@ -7,6 +7,7 @@ import { Contract } from "ethers";
  * This script provides information about:
  * - Idle asset balance in the vault
  * - Total assets (including those in pools)
+ * - Total AUM in USD (using Pyth oracle)
  * - Pending deposit and withdrawal requests (count and amounts)
  * - Pool balances
  * 
@@ -17,12 +18,14 @@ import { Contract } from "ethers";
  * - YIELD_ALLOCATOR_VAULT_ADDRESS: Address of the YieldAllocatorVault contract
  * - WHITELIST_REGISTRY_ADDRESS: Address of the WhitelistRegistry contract
  * - START_EPOCH: Optional timestamp for APY calculation
+ * - MAX_PRICE_AGE: Optional maximum age for Pyth price data in seconds (default: 3600)
  */
 
 // Get environment variables
 const YIELD_ALLOCATOR_VAULT_ADDRESS = process.env.YIELD_ALLOCATOR_VAULT_ADDRESS;
 const WHITELIST_REGISTRY_ADDRESS = process.env.WHITELIST_REGISTRY_ADDRESS;
 const START_EPOCH = process.env.START_EPOCH;
+const MAX_PRICE_AGE = process.env.MAX_PRICE_AGE ? parseInt(process.env.MAX_PRICE_AGE) : 24*60*60; // Default to 1 day
 
 
 async function main() {
@@ -66,9 +69,81 @@ async function main() {
   const totalAssets = await yieldAllocatorVault.totalAssets();
   console.log(`Total assets in vault: ${ethers.formatUnits(totalAssets, assetDecimals)} ${assetSymbol}`);
   
-  // Calculate and display share price
+  // Get total supply of shares
   const totalSupply = await yieldAllocatorVault.totalSupply();
   console.log(`Total supply of shares: ${ethers.formatUnits(totalSupply, 18)} shares`);
+
+  // Get total AUM in USD using Pyth oracle
+  console.log(`\n===== Pyth Oracle AUM Data =====`);
+  try {
+    // Check if Pyth oracle is configured
+    const pythAddress = await yieldAllocatorVault.pyth();
+    
+    if (pythAddress === ethers.ZeroAddress) {
+      console.log(`⚠️ Pyth oracle not configured. Use the ConfigurePythOracle script to set it up.`);
+    } else {
+      console.log(`Pyth oracle address: ${pythAddress}`);
+      console.log(`Using max price age: ${MAX_PRICE_AGE} seconds`);
+      
+      // Check if price ID is set for the asset
+      let hasPriceId = false;
+      let priceId = ethers.ZeroHash;
+      
+      try {
+        // Try to use the hasAssetPriceId function if it exists
+        hasPriceId = await (yieldAllocatorVault as any).hasAssetPriceId(assetAddress);
+        priceId = hasPriceId ? await (yieldAllocatorVault as any).priceIdForAsset(assetAddress) : ethers.ZeroHash;
+      } catch (e) {
+        // Fallback: check directly if priceIdForAsset returns a non-zero value
+        try {
+          priceId = await (yieldAllocatorVault as any).priceIdForAsset(assetAddress);
+          hasPriceId = priceId !== ethers.ZeroHash;
+        } catch (e2) {
+          console.log(`⚠️ Could not check price ID configuration: ${(e2 as Error).message}`);
+        }
+      }
+      
+      console.log(`\n----- Price ID Configuration -----`);
+      console.log(`Asset: ${assetSymbol} (${assetAddress})`);
+      
+      if (!hasPriceId) {
+        console.log(`⚠️ Price ID not set for this asset. Use the ConfigurePythOracle script to set it.`);
+      } else {
+        console.log(`Price ID: ${priceId}`);
+        
+        // Get latest asset price from Pyth oracle
+        try {
+          // Try to use the getAssetPriceUsd function if it exists
+          const [priceUsd, publishTime, confidence] = await (yieldAllocatorVault as any).getAssetPriceUsd(assetAddress, MAX_PRICE_AGE);
+          const timestamp = new Date(Number(publishTime) * 1000).toISOString();
+          
+          console.log(`\n----- Latest Asset Price Data -----`);
+          console.log(`Price: $${ethers.formatUnits(priceUsd, 18)}`);
+          console.log(`Confidence: ±$${ethers.formatUnits(confidence, 18)} (${(Number(confidence) * 100 / Number(priceUsd)).toFixed(2)}%)`);
+          console.log(`Published: ${timestamp} (${Math.floor((Date.now()/1000) - Number(publishTime))} seconds ago)`);
+        } catch (priceError: any) {
+          console.log(`⚠️ Error getting asset price: ${priceError.message}`);
+          console.log(`Make sure the contract has been updated with the getAssetPriceUsd function.`);
+        }
+      }
+      
+      // Get total AUM in USD
+      const totalAumUsd = await yieldAllocatorVault.totalAumUsd(MAX_PRICE_AGE);
+      console.log(`\n----- Total AUM Data -----`);
+      console.log(`Total AUM in USD: $${ethers.formatUnits(totalAumUsd, 18)}`);
+      
+      // Calculate AUM per share if there are shares
+      if (totalSupply > 0n) {
+        const aumPerShare = (totalAumUsd * BigInt(10**18)) / totalSupply;
+        console.log(`AUM per share: $${ethers.formatUnits(aumPerShare, 18)}`);
+      }
+    }
+  } catch (error: any) {
+    console.log(`⚠️ Error getting AUM data from Pyth oracle: ${error.message}`);
+    console.log(`Make sure Pyth oracle is properly configured and price feeds are available.`);
+  }
+  
+  // Calculate and display share price
   
   // Calculate price per share (handle division by zero case)
   const pricePerShare = totalSupply > 0n ? 

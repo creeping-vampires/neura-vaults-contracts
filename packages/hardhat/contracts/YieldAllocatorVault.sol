@@ -9,6 +9,22 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./WhitelistRegistry.sol";
 
+
+// --- Pyth minimal structs/interface ---
+library PythStructs {
+    struct Price {
+        int64 price;        // price mantissa
+        uint64 conf;        // confidence interval
+        int32 expo;         // exponent (price * 10**expo)
+        uint64 publishTime; // unix time
+    }
+}
+
+interface IPyth {
+    function getPriceNoOlderThan(bytes32 priceId, uint256 age) external view returns (PythStructs.Price memory);
+    function getPriceUnsafe(bytes32 priceId) external view returns (PythStructs.Price memory);
+}
+
 /**
  * @title YieldAllocatorVault (ERC-4626 + ERC-7540 async deposit/withdraw FIFO with performance fee)
  * @notice
@@ -22,6 +38,11 @@ contract YieldAllocatorVault is ERC4626, AccessControl, ReentrancyGuard {
 
     bytes32 public constant EXECUTOR = keccak256("EXECUTOR");
     WhitelistRegistry public registry;
+
+    // ===== Pyth =====
+    IPyth public pyth;
+    // map underlying token -> Pyth price id (usually TOKEN/USD)
+    mapping(address => bytes32) public priceIdForAsset;
 
     // ===== Deposit Queue =====
     struct DepositRequest {
@@ -60,7 +81,7 @@ contract YieldAllocatorVault is ERC4626, AccessControl, ReentrancyGuard {
     // ===== Performance Fee =====
     address public feeRecipient;
     uint256 public performanceFeeBps = 1000; // 10%
-    
+
     /**
      * @dev Sets the fee recipient address
      * @param _feeRecipient The address to receive performance fees
@@ -100,6 +121,23 @@ contract YieldAllocatorVault is ERC4626, AccessControl, ReentrancyGuard {
     ) ERC20(name_, symbol_) ERC4626(_asset) {
         registry = _registry;
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    }
+
+    // ===== Pyth setters =====
+    function setPythAddress(IPyth _pyth) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        pyth = _pyth;
+    }
+
+    /// @notice set the Pyth price id for a given ERC20 asset (e.g. TOKEN/USD price id)
+    function setPriceIdForAsset(address asset, bytes32 priceId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        priceIdForAsset[asset] = priceId;
+    }
+    
+    /// @notice Check if a price ID is set for a specific asset
+    /// @param asset The address of the asset to check
+    /// @return True if a price ID is set for the asset, false otherwise
+    function hasAssetPriceId(address asset) external view returns (bool) {
+        return priceIdForAsset[asset] != bytes32(0);
     }
 
     // ===== Operator Management =====
@@ -507,58 +545,151 @@ contract YieldAllocatorVault is ERC4626, AccessControl, ReentrancyGuard {
 
     function _withdrawFromPoolsAsNeeded(address[] memory pools, address underlying, uint256 shortfall) internal returns (bool) {
         uint256 remaining = shortfall;
-        // Initial shortfall used for logging/debugging if needed
-        // uint256 initialShortfall = shortfall;
         bool fullyWithdrawn = false;
         
         for (uint256 j = 0; j < pools.length && remaining > 0; j++) {
             address pool = pools[j];
             if (!registry.isWhitelisted(pool)) continue;
             
-            // Get balance before withdrawal to accurately track received amount
             uint256 balanceBefore = IERC20(underlying).balanceOf(address(this));
             
-            // Attempt to withdraw from pool
             if (registry.getPoolKind(pool) == WhitelistRegistry.PoolKind.AAVE) {
-                try IPool(pool).withdraw(underlying, remaining, address(this)) returns (uint256 /* received */) {
-                    // Update accounting based on actual received amount
+                try IPool(pool).withdraw(underlying, remaining, address(this)) returns (uint256) {
                     uint256 actualReceived = IERC20(underlying).balanceOf(address(this)) - balanceBefore;
-                    
-                    // Update pool principal
                     uint256 p = poolPrincipal[pool];
                     poolPrincipal[pool] = actualReceived >= p ? 0 : (p - actualReceived);
-                    
-                    // Update remaining shortfall
                     remaining = actualReceived >= remaining ? 0 : remaining - actualReceived;
-                    
                     emit PoolWithdrawn(pool, remaining + actualReceived, actualReceived);
                 } catch {
-                    // Continue to next pool if withdrawal fails
                     continue;
                 }
             } else {
-                try IERC4626Like(pool).withdraw(remaining, address(this), address(this)) returns (uint256 /* received */) {
-                    // Update accounting based on actual received amount
+                try IERC4626Like(pool).withdraw(remaining, address(this), address(this)) returns (uint256) {
                     uint256 actualReceived = IERC20(underlying).balanceOf(address(this)) - balanceBefore;
-                    
-                    // Update pool principal
                     uint256 p = poolPrincipal[pool];
                     poolPrincipal[pool] = actualReceived >= p ? 0 : (p - actualReceived);
-                    
-                    // Update remaining shortfall
                     remaining = actualReceived >= remaining ? 0 : remaining - actualReceived;
-                    
                     emit PoolWithdrawn(pool, remaining + actualReceived, actualReceived);
                 } catch {
-                    // Continue to next pool if withdrawal fails
                     continue;
                 }
             }
         }
         
-        // Check if we were able to withdraw the full amount needed
         fullyWithdrawn = (remaining == 0);
         return fullyWithdrawn;
+    }
+
+    // ===== Pyth helpers =====
+    /// @notice Get the latest USD price for a specific asset
+    /// @param asset The address of the asset to get the price for
+    /// @param maxPriceAge Maximum acceptable age in seconds for the price data
+    /// @return priceUsd_1e18 The price in USD with 18 decimals
+    /// @return publishTime The timestamp when the price was published
+    /// @return confidence_1e18 The confidence interval of the price (also with 18 decimals)
+    function getAssetPriceUsd(address asset, uint256 maxPriceAge) external view returns (uint256 priceUsd_1e18, uint64 publishTime, uint256 confidence_1e18) {
+        bytes32 priceId = priceIdForAsset[asset];
+        require(priceId != bytes32(0), "price id not set");
+        require(address(pyth) != address(0), "pyth oracle not set");
+        
+        // Get the price from Pyth oracle
+        PythStructs.Price memory price = pyth.getPriceNoOlderThan(priceId, maxPriceAge);
+        
+        // Convert price to fixed point with 18 decimals
+        priceUsd_1e18 = _pythPriceToFixed1e18(price);
+        publishTime = price.publishTime;
+        
+        // Convert confidence to same scale as price
+        int32 expo = price.expo;
+        uint256 rawConf = uint256(price.conf);
+        
+        if (expo < 0) {
+            uint256 absExpo = uint256(uint32(-expo));
+            confidence_1e18 = (rawConf * 1e18) / (10 ** absExpo);
+        } else if (expo > 0) {
+            uint256 absExpo = uint256(uint32(expo));
+            confidence_1e18 = rawConf * 1e18 * (10 ** absExpo);
+        } else {
+            confidence_1e18 = rawConf * 1e18;
+        }
+        
+        return (priceUsd_1e18, publishTime, confidence_1e18);
+    }
+    
+    /// @dev Convert Pyth Price struct to uint256 scaled to 1e18 (USD with 18 decimals).
+    /// Reverts if price <= 0 or exponent out of range.
+    function _pythPriceToFixed1e18(PythStructs.Price memory p) internal pure returns (uint256) {
+        require(p.price > 0, "pyth: non-positive price");
+        int32 expo = p.expo;
+        uint256 raw = uint256(int256(p.price)); // price is signed
+
+        if (expo < 0) {
+            uint256 absExpo = uint256(uint32(-expo));
+            require(absExpo <= 36, "expo too small");
+            return (raw * 1e18) / (10 ** absExpo);
+        } else if (expo > 0) {
+            uint256 absExpo = uint256(uint32(expo));
+            require(absExpo <= 12, "expo too large");
+            return raw * 1e18 * (10 ** absExpo);
+        } else {
+            return raw * 1e18;
+        }
+    }
+
+    /// @notice Returns total AUM denominated in USD (1e18 fixed) using Pyth prices.
+    /// @param maxPriceAge maximum acceptable age in seconds for Pyth price (reverts if price older)
+    function totalAumUsd(uint256 maxPriceAge) external view returns (uint256 totalUsd_1e18) {
+        address[] memory pools = registry.getWhitelistedPools();
+        address underlying = asset();
+
+        bytes32 priceId = priceIdForAsset[underlying];
+        bool hasPrice = (priceId != bytes32(0) && address(pyth) != address(0));
+        uint256 assetDecimals = ERC20(underlying).decimals();
+
+        // 1) idle balance (in underlying)
+        uint256 idle = IERC20(underlying).balanceOf(address(this));
+        if (hasPrice && idle != 0) {
+            PythStructs.Price memory p = pyth.getPriceNoOlderThan(priceId, maxPriceAge);
+            uint256 priceFixed = _pythPriceToFixed1e18(p); // USD per unit, 1e18
+            totalUsd_1e18 += (idle * priceFixed) / (10 ** assetDecimals);
+        }
+
+        // 2) allocated across pools
+        for (uint256 i = 0; i < pools.length; i++) {
+            address pool = pools[i];
+            bool counted = false;
+            try IPool(pool).getReserveData(underlying) returns (DataTypes.ReserveData memory rd) {
+                address aToken = rd.aTokenAddress;
+                if (aToken != address(0)) {
+                    uint256 aBal = IERC20(aToken).balanceOf(address(this));
+                    if (aBal == 0) continue;
+                    uint256 underlyingAmount = aBal; // assume 1:1 mapping for aToken -> underlying (Aave)
+                    if (hasPrice) {
+                        PythStructs.Price memory pr = pyth.getPriceNoOlderThan(priceId, maxPriceAge);
+                        uint256 priceFixed = _pythPriceToFixed1e18(pr);
+                        totalUsd_1e18 += (underlyingAmount * priceFixed) / (10 ** assetDecimals);
+                    }
+                    counted = true;
+                }
+            } catch {}
+
+            if (counted) continue;
+
+            try IERC4626Like(pool).asset() returns (address erc4626Asset) {
+                if (erc4626Asset == underlying) {
+                    uint256 shares = IERC4626Like(pool).balanceOf(address(this));
+                    if (shares == 0) continue;
+                    uint256 underlyingAmount = IERC4626Like(pool).convertToAssets(shares);
+                    if (hasPrice) {
+                        PythStructs.Price memory pr2 = pyth.getPriceNoOlderThan(priceId, maxPriceAge);
+                        uint256 priceFixed = _pythPriceToFixed1e18(pr2);
+                        totalUsd_1e18 += (underlyingAmount * priceFixed) / (10 ** assetDecimals);
+                    }
+                }
+            } catch {}
+        }
+
+        return totalUsd_1e18;
     }
 
     // ===== ERC-165 =====
