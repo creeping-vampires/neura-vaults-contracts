@@ -1,4 +1,4 @@
-# YieldAllocatorVault Protocol Documentation
+# Neura-Vault Protocol Documentation
 
 ## Table of Contents
 
@@ -8,7 +8,7 @@
    - [Contract Interactions](#contract-interactions)
    - [Security Model](#security-model)
 3. [Smart Contracts](#smart-contracts)
-   - [YieldAllocatorVault](#yieldallocatorvault)
+   - [Neura-Vault](#neura-vault)
    - [AIAgent](#aiagent)
    - [WhitelistRegistry](#whitelistregistry)
 4. [Protocol Mechanics](#protocol-mechanics)
@@ -49,9 +49,9 @@
 
 ## Introduction
 
-The YieldAllocatorVault protocol is a decentralized yield optimization platform built on the Hyperliquid blockchain (hype-mainnet). It enables users to deposit stablecoin assets (USDe) and earn yield through automated allocation to whitelisted lending pools.
+The Neura-Vault protocol is a decentralized yield optimization platform built on the Hyperliquid blockchain (hype-mainnet). It enables users to deposit stablecoin assets (USDe) and earn yield through automated allocation to whitelisted lending pools.
 
-This documentation provides a comprehensive guide to understanding, deploying, and operating the YieldAllocatorVault protocol. It covers the technical architecture, smart contract functionality, deployment procedures, user operations, and best practices for protocol management.
+This documentation provides a comprehensive guide to understanding, deploying, and operating the Neura-Vault protocol. It covers the technical architecture, smart contract functionality, deployment procedures, user operations, and best practices for protocol management.
 
 ### Key Features
 
@@ -73,7 +73,7 @@ This documentation is intended for:
 
 ## Overview
 
-The YieldAllocatorVault protocol is designed to optimize yield generation for stablecoin assets (USDe) by allocating them across multiple lending pools on the Hyperliquid blockchain. The protocol follows the ERC-4626 tokenized vault standard, providing users with shares that represent their proportional ownership of the underlying assets and generated yield.
+The Neura-Vault protocol is designed to optimize yield generation for stablecoin assets (USDe) by allocating them across multiple lending pools on the Hyperliquid blockchain. The protocol follows the ERC-4626 tokenized vault standard, providing users with shares that represent their proportional ownership of the underlying assets and generated yield.
 
 ### Protocol Goals
 
@@ -91,11 +91,11 @@ The YieldAllocatorVault protocol is designed to optimize yield generation for st
 
 ## Architecture
 
-The YieldAllocatorVault protocol consists of three main smart contracts that work together to provide a secure and efficient yield optimization platform.
+The Neura-Vault protocol consists of three main smart contracts that work together to provide a secure and efficient yield optimization platform.
 
 ### Core Components
 
-1. **YieldAllocatorVault**: The main contract implementing the ERC-4626 standard. It manages deposits, withdrawals, share issuance, and asset allocation.
+1. **Neura-Vault**: The main contract implementing the ERC-4626 standard. It manages deposits, withdrawals, share issuance, and asset allocation.
 
 2. **AIAgent**: An executor contract that interacts with lending pools to deposit assets, withdraw assets, and reinvest yield.
 
@@ -106,8 +106,8 @@ The YieldAllocatorVault protocol consists of three main smart contracts that wor
 ```
 ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
 │                 │      │                 │      │                 │
-│      Users      │◄────►│YieldAllocator   │◄────►│   AIAgent      │
-│                 │      │     Vault       │      │                 │
+│      Users      │◄────►│   Neura-Vault   │◄────►│   AIAgent      │
+│                 │      │                 │      │                 │
 └─────────────────┘      └────────┬────────┘      └────────┬────────┘
                                   │                        │
                                   │                        │
@@ -120,8 +120,8 @@ The YieldAllocatorVault protocol consists of three main smart contracts that wor
                          └─────────────────┘      └─────────────────┘
 ```
 
-- **Users** interact with the YieldAllocatorVault to deposit assets and receive shares, or to withdraw assets by redeeming shares.
-- **YieldAllocatorVault** manages user deposits, withdrawals, and share accounting.
+- **Users** interact with the Neura-Vault to deposit assets and receive shares, or to withdraw assets by redeeming shares.
+- **Neura-Vault** manages user deposits, withdrawals, and share accounting.
 - **AIAgent** acts as an executor to interact with lending pools for depositing assets, withdrawing assets, and reinvesting yield.
 - **WhitelistRegistry** maintains the list of approved lending pools that the protocol can interact with.
 - **Lending Pools** are external protocols where assets are deposited to generate yield.
@@ -154,9 +154,9 @@ The protocol implements a robust security model with the following key features:
 
 The protocol consists of three main smart contracts that work together to provide a secure and efficient yield optimization platform.
 
-### YieldAllocatorVault
+### Neura-Vault
 
-The YieldAllocatorVault is the core contract of the protocol, implementing the ERC-4626 tokenized vault standard. It manages user deposits, withdrawals, share issuance, and asset allocation.
+The Neura-Vault is the core contract of the protocol, implementing the ERC-4626 tokenized vault standard. It manages user deposits, withdrawals, share issuance, and asset allocation.
 
 **Key Features:**
 
@@ -179,7 +179,7 @@ The YieldAllocatorVault is the core contract of the protocol, implementing the E
 
 ### AIAgent
 
-The AIAgent contract acts as an executor for the YieldAllocatorVault, providing functionality to interact with lending pools for depositing assets, withdrawing assets, and reinvesting yield.
+The AIAgent contract acts as an executor for the Neura-Vault, providing functionality to interact with lending pools for depositing assets, withdrawing assets, and reinvesting yield.
 
 **Key Features:**
 
@@ -215,7 +215,7 @@ The WhitelistRegistry contract maintains a list of approved lending pools that t
 
 ### Share Price Calculation
 
-The YieldAllocatorVault follows the ERC-4626 standard for calculating share price, which determines the relationship between vault shares and underlying assets.
+The Neura-Vault follows the ERC-4626 standard for calculating share price, which determines the relationship between vault shares and underlying assets.
 
 **Asset-to-Share Conversion:**
 
@@ -255,7 +255,7 @@ This mechanism ensures that yield is automatically distributed to all share hold
 
 ### Deposit Process
 
-The deposit process in the YieldAllocatorVault follows the standard ERC-4626 pattern:
+The deposit process in the Neura-Vault follows the standard ERC-4626 pattern:
 
 1. User calls `deposit(assets, receiver)` function with the amount of assets to deposit
 2. Contract calculates the number of shares to mint based on the current share price
@@ -266,7 +266,7 @@ The deposit process in the YieldAllocatorVault follows the standard ERC-4626 pat
 
 ### Withdrawal Process
 
-The YieldAllocatorVault implements two withdrawal paths depending on the availability of idle assets:
+The Neura-Vault implements two withdrawal paths depending on the availability of idle assets:
 
 **Immediate Withdrawal:**
 
@@ -307,7 +307,7 @@ This two-phase withdrawal process ensures that the protocol can maintain optimal
 
 ### Yield Generation
 
-The YieldAllocatorVault generates yield by allocating assets to whitelisted lending pools. The yield generation process involves several steps:
+The Neura-Vault generates yield by allocating assets to whitelisted lending pools. The yield generation process involves several steps:
 
 **Asset Allocation:**
 
@@ -339,7 +339,7 @@ The YieldAllocatorVault generates yield by allocating assets to whitelisted lend
 
 ### Deployment Guide
 
-This section provides step-by-step instructions for deploying the YieldAllocatorVault protocol to the Hyperliquid blockchain (hype-mainnet).
+This section provides step-by-step instructions for deploying the Neura-Vault protocol to the Hyperliquid blockchain (hype-mainnet).
 
 **Prerequisites:**
 
@@ -351,8 +351,8 @@ This section provides step-by-step instructions for deploying the YieldAllocator
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-org/yield-allocator-vault.git
-   cd yield-allocator-vault
+   git clone https://github.com/your-org/neura-vault.git
+   cd neura-vault
    ```
 
 2. Install dependencies:
@@ -384,7 +384,7 @@ This section provides step-by-step instructions for deploying the YieldAllocator
 
    This will deploy the following contracts:
    - WhitelistRegistry
-   - YieldAllocatorVault
+   - Neura-Vault
    - AIAgent
 
 2. The deployment script will automatically:
@@ -476,7 +476,7 @@ For more robust automation, the protocol can be deployed as Kubernetes CronJobs.
 
 ## User Guide
 
-This section provides instructions for users to interact with the YieldAllocatorVault protocol.
+This section provides instructions for users to interact with the Neura-Vault protocol.
 
 ### Depositing Assets
 
@@ -505,16 +505,16 @@ Users can deposit USDe assets into the vault using either the provided scripts o
 
 **Direct Contract Interaction:**
 
-1. Approve the YieldAllocatorVault contract to spend your USDe tokens:
+1. Approve the Neura-Vault contract to spend your USDe tokens:
    ```solidity
    // Using ethers.js v6
    const usdeContract = await ethers.getContractAt("IERC20", usdeAddress);
    await usdeContract.approve(vaultAddress, amountToDeposit);
    ```
 
-2. Call the deposit function on the YieldAllocatorVault contract:
+2. Call the deposit function on the Neura-Vault contract:
    ```solidity
-   const vaultContract = await ethers.getContractAt("YieldAllocatorVault", vaultAddress);
+   const vaultContract = await ethers.getContractAt("Neura-Vault", vaultAddress);
    await vaultContract.deposit(amountToDeposit, receiverAddress);
    ```
 
@@ -538,14 +538,14 @@ The withdrawal process depends on the availability of idle assets in the vault.
 
 1. For immediate withdrawals (if idle assets are sufficient):
    ```solidity
-   const vaultContract = await ethers.getContractAt("YieldAllocatorVault", vaultAddress);
+   const vaultContract = await ethers.getContractAt("Neura-Vault", vaultAddress);
    await vaultContract.withdraw(assetsToWithdraw, receiverAddress, ownerAddress);
    ```
 
 2. For queued withdrawals (if idle assets are insufficient):
    ```solidity
    // First, approve the vault to transfer your shares to escrow
-   const vaultContract = await ethers.getContractAt("YieldAllocatorVault", vaultAddress);
+   const vaultContract = await ethers.getContractAt("Neura-Vault", vaultAddress);
    await vaultContract.approve(vaultAddress, sharesToRedeem);
    
    // Then request the withdrawal
@@ -578,7 +578,7 @@ yarn deploy --tags CheckBalance --network hype-mainnet
 
 1. To check your share balance:
    ```solidity
-   const vaultContract = await ethers.getContractAt("YieldAllocatorVault", vaultAddress);
+   const vaultContract = await ethers.getContractAt("Neura-Vault", vaultAddress);
    const shareBalance = await vaultContract.balanceOf(userAddress);
    ```
 
@@ -627,11 +627,11 @@ A web interface is available for users to interact with the protocol in a more u
 
 ## Executor Operations
 
-This section provides detailed instructions for protocol executors who are responsible for managing the YieldAllocatorVault's operations.
+This section provides detailed instructions for protocol executors who are responsible for managing the Neura-Vault's operations.
 
 ### Executor Role Assignment
 
-Before performing any executor operations, ensure that your wallet has been granted the EXECUTOR role on both the YieldAllocatorVault and AIAgent contracts.
+Before performing any executor operations, ensure that your wallet has been granted the EXECUTOR role on both the Neura-Vault and AIAgent contracts.
 
 1. Check if your address has the EXECUTOR role:
    ```bash
@@ -704,7 +704,7 @@ Executors are responsible for fulfilling withdrawal requests when users want to 
 
 1. To fulfill withdrawal requests manually:
    ```solidity
-   const vaultContract = await ethers.getContractAt("YieldAllocatorVault", vaultAddress);
+   const vaultContract = await ethers.getContractAt("Neura-Vault", vaultAddress);
    await vaultContract.fulfillWithdrawalRequests(maxRequestsToFulfill);
    ```
 
@@ -783,7 +783,7 @@ These automated operations ensure that the protocol runs efficiently without req
 
 ## Best Practices
 
-This section outlines best practices for operating and interacting with the YieldAllocatorVault protocol.
+This section outlines best practices for operating and interacting with the Neura-Vault protocol.
 
 ### For Users
 
@@ -857,14 +857,14 @@ This section outlines best practices for operating and interacting with the Yiel
 
 ## Technical Reference
 
-This section provides detailed technical information about the YieldAllocatorVault protocol for developers and auditors.
+This section provides detailed technical information about the Neura-Vault protocol for developers and auditors.
 
 ### Contract Interfaces
 
-**YieldAllocatorVault Interface:**
+**Neura-Vault Interface:
 
 ```solidity
-interface IYieldAllocatorVault is IERC4626 {
+interface INeuraVault is IERC4626 {
     // Withdrawal request functions
     function requestWithdrawal(uint256 shares) external;
     function claimWithdrawal() external returns (uint256);
@@ -909,7 +909,7 @@ interface IWhitelistRegistry {
 
 ### Events
 
-**YieldAllocatorVault Events:**
+**Neura-Vault Events:**
 
 ```solidity
 event WithdrawalRequested(address indexed owner, uint256 shares, uint256 assetsAtRequest);
@@ -936,7 +936,7 @@ event PoolRemoved(address indexed pool);
 ### Error Codes
 
 ```solidity
-// YieldAllocatorVault errors
+// Neura-Vault errors
 error InsufficientIdleAssets(uint256 requested, uint256 available);
 error WithdrawalRequestNotFound();
 error WithdrawalRequestNotFulfilled();
@@ -1036,7 +1036,7 @@ The protocol includes several gas optimization techniques:
 
 **Contract Addresses:**
 
-- YieldAllocatorVault: `0x3c297523DE2aF8210368b09c24aAD823718a2baA`
+- Neura-Vault: `0x3c297523DE2aF8210368b09c24aAD823718a2baA`
 - AIAgent: `0xd52d7a54Bb0CE313c316D46a6Eafc79b2C52E8B9`
 - WhitelistRegistry: `0x9dB8a2C1aD1554eF15e9036cc695aBaa096609B6`
 - USDe Token: `0xc2a4c5a8b8ab5d2b6a9a8a14e9e0b2e9572446d2`
@@ -1048,7 +1048,7 @@ The protocol includes several gas optimization techniques:
 
 **Useful Links:**
 
-- GitHub Repository: [https://github.com/your-org/yield-allocator-vault](https://github.com/your-org/yield-allocator-vault)
+- GitHub Repository: [https://github.com/your-org/neura-vault](https://github.com/your-org/neura-vault)
 - Documentation: [https://docs.yield-allocator.example.com](https://docs.yield-allocator.example.com)
 - Web Interface: [https://yield-allocator.example.com](https://yield-allocator.example.com)
 - Block Explorer: [https://hyperevmscan.io](https://hyperevmscan.io)
