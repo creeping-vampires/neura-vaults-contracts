@@ -1134,7 +1134,7 @@ const deployedContracts = {
   },
   999: {
     AIAgent: {
-      address: "0xeEAe75329229040D166DfA8f74E10C32ac525bdF",
+      address: "0x7b10086b7a1363E45a9e3875B8dA42927BA27F08",
       abi: [
         {
           inputs: [
@@ -1913,7 +1913,7 @@ const deployedContracts = {
       },
     },
     YieldAllocatorVault: {
-      address: "0xa55Ee3aD055f16c82AcE4b1A8e3D2b8C30cb2418",
+      address: "0x259Ae78e99405393bc398EeC9fc6d00c5b1694a9",
       abi: [
         {
           inputs: [
@@ -2865,6 +2865,40 @@ const deployedContracts = {
         {
           inputs: [
             {
+              internalType: "address",
+              name: "asset",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "maxPriceAge",
+              type: "uint256",
+            },
+          ],
+          name: "getAssetPriceUsd",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "priceUsd_1e18",
+              type: "uint256",
+            },
+            {
+              internalType: "uint64",
+              name: "publishTime",
+              type: "uint64",
+            },
+            {
+              internalType: "uint256",
+              name: "confidence_1e18",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
               internalType: "bytes32",
               name: "role",
               type: "bytes32",
@@ -2897,6 +2931,25 @@ const deployedContracts = {
           name: "grantRole",
           outputs: [],
           stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "asset",
+              type: "address",
+            },
+          ],
+          name: "hasAssetPriceId",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
           type: "function",
         },
         {
@@ -3284,6 +3337,38 @@ const deployedContracts = {
         {
           inputs: [
             {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          name: "priceIdForAsset",
+          outputs: [
+            {
+              internalType: "bytes32",
+              name: "",
+              type: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "pyth",
+          outputs: [
+            {
+              internalType: "contract IPyth",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
               internalType: "uint256",
               name: "shares",
               type: "uint256",
@@ -3493,6 +3578,37 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [
+            {
+              internalType: "address",
+              name: "asset",
+              type: "address",
+            },
+            {
+              internalType: "bytes32",
+              name: "priceId",
+              type: "bytes32",
+            },
+          ],
+          name: "setPriceIdForAsset",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "contract IPyth",
+              name: "_pyth",
+              type: "address",
+            },
+          ],
+          name: "setPythAddress",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           inputs: [],
           name: "sharePrice",
           outputs: [
@@ -3544,6 +3660,25 @@ const deployedContracts = {
             {
               internalType: "uint256",
               name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "maxPriceAge",
+              type: "uint256",
+            },
+          ],
+          name: "totalAumUsd",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "totalUsd_1e18",
               type: "uint256",
             },
           ],

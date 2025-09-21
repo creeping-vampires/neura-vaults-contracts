@@ -39,6 +39,7 @@
    - [Risk Mitigation](#risk-mitigation)
    - [Emergency Procedures](#emergency-procedures-1)
 9. [Technical Reference](#technical-reference)
+   - [Pyth Oracle Integration](#pyth-oracle-integration)
    - [Contract Addresses](#contract-addresses)
    - [Function Reference](#function-reference)
    - [Event Reference](#event-reference)
@@ -858,6 +859,100 @@ This section outlines best practices for operating and interacting with the Neur
 ## Technical Reference
 
 This section provides detailed technical information about the Neura-Vault protocol for developers and auditors.
+
+### Pyth Oracle Integration
+
+The Neura-Vault protocol integrates with the Pyth Oracle to obtain accurate price data for assets, enabling precise USD valuation of the vault's holdings.
+
+**Key Features:**
+
+1. **Real-time Price Data**: Obtains up-to-date price information for assets from Pyth's decentralized oracle network
+2. **Price Feed Configuration**: Supports configuration of price feed IDs for different assets
+3. **AUM Calculation**: Uses price data to calculate Assets Under Management (AUM) in USD
+4. **Confidence Intervals**: Provides confidence metrics for price data reliability
+5. **Stale Price Protection**: Includes maximum age parameters to prevent using outdated price data
+
+**Integration Components:**
+
+```solidity
+// Pyth Oracle interface
+interface IPyth {
+    struct Price {
+        int64 price;      // Price value with 8 decimals
+        uint64 conf;      // Confidence interval with 8 decimals
+        int32 expo;       // Price exponent
+        uint64 publishTime; // Unix timestamp of the publication time
+    }
+    
+    function getPriceNoOlderThan(bytes32 priceId, uint256 maxAge) external view returns (Price memory price);
+}
+```
+
+**Vault Functions for Pyth Integration:**
+
+```solidity
+// Set the Pyth oracle address
+function setPythAddress(IPyth _pyth) external onlyRole(DEFAULT_ADMIN_ROLE);
+
+// Set the price ID for a specific asset
+function setPriceIdForAsset(address asset, bytes32 priceId) external onlyRole(DEFAULT_ADMIN_ROLE);
+
+// Check if a price ID is set for an asset
+function hasAssetPriceId(address asset) external view returns (bool);
+
+// Get the latest USD price for a specific asset
+function getAssetPriceUsd(address asset, uint256 maxPriceAge) external view returns (
+    uint256 priceUsd_1e18,
+    uint64 publishTime,
+    uint256 confidence_1e18
+);
+
+// Calculate total AUM in USD
+function totalAumUsd(uint256 maxPriceAge) external view returns (uint256);
+```
+
+**Configuration Process:**
+
+1. Set the Pyth oracle address using `setPythAddress`
+2. Configure price feed IDs for each asset using `setPriceIdForAsset`
+3. Use `getAssetPriceUsd` to retrieve the latest price data
+4. Use `totalAumUsd` to get the total value of all assets in USD
+
+**Usage Example:**
+
+```typescript
+// Configure Pyth oracle
+const pythOracleAddress = "0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc";
+const assetAddress = "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34"; // USDe
+const priceId = "0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d";
+
+// Set Pyth oracle address
+await yieldAllocatorVault.setPythAddress(pythOracleAddress);
+
+// Set price ID for asset
+await yieldAllocatorVault.setPriceIdForAsset(assetAddress, priceId);
+
+// Get latest price
+const maxPriceAge = 86400; // 24 hours
+const [priceUsd, publishTime, confidence] = await yieldAllocatorVault.getAssetPriceUsd(assetAddress, maxPriceAge);
+
+// Get total AUM in USD
+const totalAumUsd = await yieldAllocatorVault.totalAumUsd(maxPriceAge);
+```
+
+**Monitoring Tools:**
+
+The protocol includes a script to monitor Pyth oracle integration:
+
+```bash
+yarn hardhat run scripts/check-protocol-status.ts --network hype-mainnet
+```
+
+This displays information about:
+- Pyth oracle configuration
+- Price feed IDs for assets
+- Latest price data with confidence intervals
+- Total AUM in USD
 
 ### Contract Interfaces
 

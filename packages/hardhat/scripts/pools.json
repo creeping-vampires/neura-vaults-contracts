@@ -1,0 +1,24 @@
+{
+  "pools": [
+    {
+      "address": "0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b",
+      "name": "Hyperrfi USDe Pool",
+      "kind": "AAVE"
+    },
+    {
+      "address": "0x00A89d7a5A02160f20150EbEA7a2b5E4879A1A8b",
+      "name": "Hyperlend USDe Pool",
+      "kind": "AAVE"
+    },
+    {
+      "address": "0x835FEBF893c6DdDee5CF762B0f8e31C5B06938ab",
+      "name": "Felix USDe Pool",
+      "kind": "ERC4626"
+    },
+    {
+      "address": "0xfc5126377f0efc0041c0969ef9ba903ce67d151e",
+      "name": "Felix USDT0 Pool",
+      "kind": "ERC4626"
+    }
+  ]
+}
